@@ -1,0 +1,113 @@
+#!/bin/bash
+
+# ==============================================================================
+# MS Office Setup
+#
+#   2016-08-27 rik: initial script
+#
+# ==============================================================================
+
+# ------------------------------------------------------------------------------
+# Ensure script running as regular user
+# ------------------------------------------------------------------------------
+if [ $(id -u) -eq 0 ]
+then
+    echo "wasta-msoffice-setup started as root user."
+    echo "No processing done.  Exiting...."
+    exit 0
+fi
+
+# ------------------------------------------------------------------------------
+# Function: createPrefix
+#
+#   Create MS Office Wine Prefix
+# ------------------------------------------------------------------------------
+createPrefix () {
+    rm -rf $PREFIX
+    WINEPREFIX=$PREFIX WINEARCH=win32 winetricks win7
+}
+
+# ------------------------------------------------------------------------------
+# Main Processing
+# ------------------------------------------------------------------------------
+# wasta-msoffice-setup directory (for resources)
+DIR=/usr/share/wasta-msoffice-setup
+
+PREFIX=/home/$USER/.wine-msoffice
+
+if [ -d "$PREFIX" ];
+then
+    # Wine PREFIX exists, ask user if they want to overwrite it or update it
+    zenity --question --no-wrap --height=200 --width=500 \
+        --title="wasta-msoffice-setup" \
+        --window-icon=wasta-linux \
+        --text="<b>Remove existing MS Office Wine Prefix?</b> 
+
+<i>The folder $PREFIX already exists.  Do you want to delete it
+in order to re-setup a new MS Office Wine Prefix?</i>" >/dev/null 2>&1
+    if [ "$?" -eq 0 ];
+    then
+        # User said yes: re-create PREFIX
+        createPrefix
+    fi
+else
+    # No Wine PREFIX: prompt user
+    zenity --question --no-wrap --height=200 --width=500 \
+        --title="wasta-msoffice-setup" \
+        --window-icon=wasta-linux \
+        --text="<b>Setup MS Office Wine Prefix?</b>
+
+<i>Do you want to setup a MS Office Wine Prefix?</i>" >/dev/null 2>&1
+    if [ "$?" -eq 0 ];
+    then
+        # User said yes: create PREFIX
+        createPrefix
+    else
+        # exit
+        exit 0
+    fi
+fi
+
+if [ -d "$PREFIX" ];
+then
+    zenity --info --no-wrap --height=200 --width=500 \
+        --title="wasta-msoffice-setup" --ok-label="Continue" \
+        --window-icon=wasta-linux \
+        --text="<b>Ready to install MS Office</b>\n
+You will need to to locate the 'Setup.exe' file for MS Office" >/dev/null 2>&1
+
+    SETUP_FILE=$(zenity --file-selection \
+        --window-icon=wasta-linux \
+        --title="Select your MS Office 'Setup.exe' File")
+    if [[ "${SETUP_FILE,,}" == *"setup.exe" ]]
+    then
+        # Run MS Office Setup
+        zenity --info --height=200 --width=500 \
+            --title="wasta-msoffice-setup" --ok-label="Continue" \
+            --window-icon=wasta-linux \
+            --text="<b>Ready for MS Office  Installation</b>\n
+
+<b>******************************************************</b>
+<b><i>Installation Notes:</i></b>
+- Choose 'Custom' in order to <b>de-select</b> MS Office
+  applications that aren't wanted, such as Access, Outlook
+  OneNote, Grove, InfoPath, Visio Viewer, Office Tools, etc.  You <b>must</b> keep 'Office Shared Features | Visual Basic for Applications'
+  selected for install if you want VBA (macro) support.
+<b>******************************************************</b>\n\n" >/dev/null 2>&1
+
+        WINEPREFIX=$PREFIX wine "$SETUP_FILE" 2> /dev/null
+
+        # Add "Saveas PDF" compatibility to MS Office
+        WINEPREFIX=$PREFIX wine $DIR/resources/SaveAsPDFandXPS.exe >/dev/null 2>&1
+    else
+        zenity --error --no-wrap --height=200 \
+          --title="wasta-msoffice-setup: Exiting" \
+          --window-icon=/usr/share/icons/hicolor/64x64/apps/wasta-offline.png \
+          --text="<b>Selected File:</b> $SETUP_FILE\n
+This file is not a <b>'Setup.exe'</b> file.\n
+wasta-msoffice-setup will now exit.\n\n" >/dev/null 2>&1
+        exit 0
+    fi
+fi
+
+exit 0
