@@ -23,8 +23,32 @@ fi
 #   Create MS Office Wine Prefix
 # ------------------------------------------------------------------------------
 createPrefix () {
+    # remove PREFIX if found
     rm -rf $PREFIX
-    WINEPREFIX=$PREFIX WINEARCH=win32 winetricks win7
+    # remove desktop entries referencing $PREFIX.
+    # note: grep --null returns null separated list to handle space in filenames
+    # note: xargs -0 to handle null separated items
+    grep -r -l --null "$PREFIX" "$HOME/.local/share/applications" \
+        | xargs -0 rm >/dev/null 2>&1
+
+    WINEPREFIX=$PREFIX WINEARCH=win32 winetricks win7 >/dev/null 2>&1
+    OUTNUM=$?
+    if [ "$OUTNUM" -ne 0 ];
+    then
+        # some failure: exit
+        errorExit "<b>Setup of MS Office Wine Prefix failed!</b>"
+    fi
+    ln -s $HOME "$PREFIX/dosdevices/h:"
+    ln -s "/media/$USER" "$PREFIX/dosdevices/u:"
+}
+
+errorExit () {
+    zenity --error --no-wrap --height=200 \
+        --title="wasta-msoffice-setup: Error" \
+        --window-icon=/usr/share/icons/hicolor/64x64/apps/wasta-offline.png \
+        --text="$1 \n
+<i>wasta-msoffice-setup will now exit.</i>" >/dev/null 2>&1
+    exit 1
 }
 
 # ------------------------------------------------------------------------------
@@ -32,8 +56,25 @@ createPrefix () {
 # ------------------------------------------------------------------------------
 # wasta-msoffice-setup directory (for resources)
 DIR=/usr/share/wasta-msoffice-setup
-
 PREFIX=/home/$USER/.wine-msoffice
+
+zenity --question --no-wrap --height=200 --width=500 \
+    --title="wasta-msoffice-setup" \
+    --window-icon=wasta-linux \
+    --text="<b>Do you want to install MS Office using Wine?</b> 
+
+<b>Note:</b> <i><u>You will need valid MS Office installation media to continue!</u></i>
+
+<b>Processing Summary:</b>
+   * Create a 'MS Office Wine Prefix'
+   * Prompt for MS Office installation media 'setup.exe' file
+   * Add 'SaveAsPDF' option to MS Office
+   * 'Map Drives' to user's <i>'home'</i> and <i>'usb mount'</i> locations" >/dev/null 2>&1
+if [ "$?" -ne 0 ];
+then
+    # User didn't said yes: exit
+    exit 0
+fi
 
 if [ -d "$PREFIX" ];
 then
@@ -43,8 +84,8 @@ then
         --window-icon=wasta-linux \
         --text="<b>Remove existing MS Office Wine Prefix?</b> 
 
-<i>The folder $PREFIX already exists.  Do you want to delete it
-in order to re-setup a new MS Office Wine Prefix?</i>" >/dev/null 2>&1
+<i>The folder <u>'$PREFIX'</u> already exists.  Do you want to
+delete it in order to re-setup a new MS Office Wine Prefix?</i>" >/dev/null 2>&1
     if [ "$?" -eq 0 ];
     then
         # User said yes: re-create PREFIX
@@ -74,39 +115,58 @@ then
         --title="wasta-msoffice-setup" --ok-label="Continue" \
         --window-icon=wasta-linux \
         --text="<b>Ready to install MS Office</b>\n
-You will need to to locate the 'Setup.exe' file for MS Office" >/dev/null 2>&1
+<i>You will need to to locate the <u>'setup.exe'</u> file from the
+main folder of your MS Office installation media</i>" >/dev/null 2>&1
 
     SETUP_FILE=$(zenity --file-selection \
         --window-icon=wasta-linux \
-        --title="Select your MS Office 'Setup.exe' File")
+        --title="Select your MS Office 'setup.exe' File") >/dev/null 2>&1
+    echo $SETUP_FILE
     if [[ "${SETUP_FILE,,}" == *"setup.exe" ]]
     then
         # Run MS Office Setup
         zenity --info --height=200 --width=500 \
             --title="wasta-msoffice-setup" --ok-label="Continue" \
             --window-icon=wasta-linux \
-            --text="<b>Ready for MS Office  Installation</b>\n
+            --text="<b>Ready for MS Office Installation</b>
 
 <b>******************************************************</b>
-<b><i>Installation Notes:</i></b>
-- Choose 'Custom' in order to <b>de-select</b> MS Office
-  applications that aren't wanted, such as Access, Outlook
-  OneNote, Grove, InfoPath, Visio Viewer, Office Tools, etc.  You <b>must</b> keep 'Office Shared Features | Visual Basic for Applications'
-  selected for install if you want VBA (macro) support.
-<b>******************************************************</b>\n\n" >/dev/null 2>&1
+<b><i>Installation Notes:</i></b>\n
+    * Choose <i>'Customize'</i> in order to <i><u>de-select</u></i> MS Office
+      applications that aren't wanted, such as Access, Outlook
+      OneNote, Grove, InfoPath, Visio Viewer, Office Tools, etc.\n
+    * Keep <i>'Office Shared Features | Visual Basic for Applications'</i>
+      selected for install if you want VBA (macro) support.\n
+<b>******************************************************</b>" >/dev/null 2>&1
 
-        WINEPREFIX=$PREFIX wine "$SETUP_FILE" 2> /dev/null
+        WINEPREFIX=$PREFIX wine "$SETUP_FILE" >/dev/null 2>&1
+        OUTNUM=$?
+        if [ "$OUTNUM" -ne 0 ];
+        then
+            # some failure: exit
+            errorExit "<b>MS Office setup failed!</b>"
+        fi
 
         # Add "Saveas PDF" compatibility to MS Office
         WINEPREFIX=$PREFIX wine $DIR/resources/SaveAsPDFandXPS.exe >/dev/null 2>&1
+        OUTNUM=$?
+        if [ "$OUTNUM" -ne 0 ];
+        then
+            # some failure: exit
+            errorExit "<b>SaveAsPDF setup failed!</b>"
+        fi
+
+        zenity --info --no-wrap --height=200 \
+            --title="wasta-msoffice-setup: Complete" \
+            --window-icon=wasta-linux \
+            --text="<b>MS Office setup complete!</b> \n
+<i>Find your MS Office applications in the <u>Main Menu</u>
+under the <u>'Wine'</u> category</i>" >/dev/null 2>&1
     else
-        zenity --error --no-wrap --height=200 \
-          --title="wasta-msoffice-setup: Exiting" \
-          --window-icon=/usr/share/icons/hicolor/64x64/apps/wasta-offline.png \
-          --text="<b>Selected File:</b> $SETUP_FILE\n
-This file is not a <b>'Setup.exe'</b> file.\n
-wasta-msoffice-setup will now exit.\n\n" >/dev/null 2>&1
-        exit 0
+        # not a valid 'setup.exe' file: exit
+        errorExit "<b>Selected file:</b> \n
+$SETUP_FILE \n
+<b>is not a valid <u>'setup.exe'</u> file!</b>"
     fi
 fi
 
