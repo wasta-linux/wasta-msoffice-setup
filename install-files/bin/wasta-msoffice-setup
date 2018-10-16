@@ -4,6 +4,8 @@
 # MS Office Setup
 #
 #   2016-08-27 rik: initial script
+#   2018-10-16 rik: clean out old .desktop launchers and file associations
+#       before installing.
 #
 # ==============================================================================
 
@@ -25,11 +27,6 @@ fi
 createPrefix () {
     # remove PREFIX if found
     rm -rf $PREFIX
-    # remove desktop entries referencing $PREFIX.
-    # note: grep --null returns null separated list to handle space in filenames
-    # note: xargs -0 to handle null separated items
-    grep -r -l --null "$PREFIX" "$HOME/.local/share/applications" \
-        | xargs -0 rm >/dev/null 2>&1
 
     WINEPREFIX=$PREFIX WINEARCH=win32 winetricks win7 >/dev/null 2>&1
     OUTNUM=$?
@@ -138,6 +135,13 @@ main folder of your MS Office installation media</i>" >/dev/null 2>&1
     * Keep <i>'Office Shared Features | Visual Basic for Applications'</i>
       selected for install if you want VBA (macro) support.\n
 <b>******************************************************</b>" >/dev/null 2>&1
+
+        # Remove OLD desktop entries referencing $PREFIX.  This is needed so
+        #   that if re-install it won't duplicate launchers.
+        # note: grep --null returns null separated list to handle space in filenames
+        # note: xargs -0 to handle null separated items
+        grep -r -l --null "$PREFIX" "$HOME/.local/share/applications" \
+            | xargs -0 rm >/dev/null 2>&1
 
         WINEPREFIX=$PREFIX wine "$SETUP_FILE" >/dev/null 2>&1
         OUTNUM=$?

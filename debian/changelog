@@ -1,3 +1,10 @@
+wasta-msoffice-setup (1.0.0) bionic; urgency=medium
+
+  * wasta-msoffice-setup: cleanout .desktop files before installing
+  * debian/control: depends on wine-development | wine1.8
+
+ -- Rik Shaw <rikshaw76@gmail.com>  Tue, 16 Oct 2018 10:01:10 +0300
+
 wasta-msoffice-setup (0.1.1) xenial; urgency=medium
 
   * Added "Configure MSOffice Wine" desktop launcher
