@@ -8,7 +8,7 @@ Homepage: https://github.com/wasta-linux/wasta-msoffice-setup
 
 Package: wasta-msoffice-setup
 Architecture: all
-Depends: wine-development | wine1.8, winetricks, zenity, ${shlibs:Depends}, ${misc:Depends}
+Depends: winehq-devel | wine-development | wine1.8, winetricks, zenity, ${shlibs:Depends}, ${misc:Depends}
 Description: Setup MS Office via WINE
  Instructions (needed for each user wanting MS Office):
  1. Run 'wasta-msoffice-setup' command

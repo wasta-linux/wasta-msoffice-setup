@@ -1,3 +1,9 @@
+wasta-msoffice-setup (1.0.1) bionic; urgency=medium
+
+  * debian/control: add winehq-devel as a depends alternative
+
+ -- Rik Shaw <rikshaw76@gmail.com>  Wed, 02 Oct 2019 16:35:20 +0300
+
 wasta-msoffice-setup (1.0.0) bionic; urgency=medium
 
   * wasta-msoffice-setup: cleanout .desktop files before installing
