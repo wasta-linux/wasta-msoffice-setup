@@ -29,6 +29,20 @@ createPrefix () {
     # remove PREFIX if found
     rm -rf $PREFIX
 
+    # remove desktop entries referencing $PREFIX.
+    # note: grep --null returns null separated list to handle space in filenames
+    # note: xargs -0 to handle null separated items
+    grep -r -l --null "$PREFIX" "$HOME/.local/share/applications" \
+        | xargs -0 rm >/dev/null 2>&1
+
+    # copy in winetricks cache
+    mkdir -p $HOME/.cache/winetricks
+    rsync -avt $WINETRICKS_DIR/winetricks-cache/ $HOME/.cache/winetricks/ | tee >(zenity \
+        --height=150 --width=450 --progress --pulsate --auto-close \
+        --window-icon=$DIR/resources/wasta-linux.svg \
+        --title="Copying Winetricks Cache" \
+        --text="Copying Winetricks Cache... \n\n")
+
     WINEPREFIX=$PREFIX WINEARCH=win32 WINESERVER=$WINE_DIR/bin/wineserver \
         WINE=$WINE_DIR/bin/wine $WINETRICKS_DIR/winetricks -q win7
     OUTNUM=$?

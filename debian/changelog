@@ -1,3 +1,10 @@
+wasta-msoffice-setup (1.1.1) focal; urgency=medium
+
+  * debian/control: add wasta-winetricks-corefonts depends
+  * wasta-msoffice-setup: copy wasta-winetricks cache to user cache
+
+ -- Rik Shaw <rikshaw76@gmail.com>  Mon, 21 Sep 2020 17:33:43 +0300
+
 wasta-msoffice-setup (1.1.0) focal; urgency=medium
 
   * updating to use wasta-wine and wasta-winetricks
