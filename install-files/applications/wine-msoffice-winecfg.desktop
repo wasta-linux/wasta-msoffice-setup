@@ -1,7 +1,7 @@
 [Desktop Entry]
 Name=Configure MSOffice Wine
 Comment=Change MSOffice Wine configuration options
-Exec=sh -c "WINEPREFIX=\\$HOME/.wine-msoffice WINEARCH=win32 winetricks win7 winecfg"
+Exec=sh -c "WINEPREFIX=\\$HOME/.wine-msoffice/ WINEARCH=win32 WINESERVER=/opt/wasta-wine/bin/wineserver WINE=/opt/wasta-wine/bin/wine /opt/wasta-winetricks/winetricks win7 winecfg"
 Terminal=false
 Icon=wine-winecfg
 Type=Application

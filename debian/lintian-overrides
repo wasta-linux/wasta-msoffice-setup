@@ -1,1 +1,3 @@
 wasta-msoffice-setup: binary-without-manpage
+wasta-msoffice-setup: desktop-entry-invalid-category
+wasta-msoffice-setup: desktop-entry-lacks-main-category

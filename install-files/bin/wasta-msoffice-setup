@@ -6,6 +6,7 @@
 #   2016-08-27 rik: initial script
 #   2018-10-16 rik: clean out old .desktop launchers and file associations
 #       before installing.
+#   2020-09-21 rik: updating to use wasta-wine and wasta-winetricks
 #
 # ==============================================================================
 
@@ -28,7 +29,8 @@ createPrefix () {
     # remove PREFIX if found
     rm -rf $PREFIX
 
-    WINEPREFIX=$PREFIX WINEARCH=win32 winetricks win7 >/dev/null 2>&1
+    WINEPREFIX=$PREFIX WINEARCH=win32 WINESERVER=$WINE_DIR/bin/wineserver \
+        WINE=$WINE_DIR/bin/wine $WINETRICKS_DIR/winetricks -q win7
     OUTNUM=$?
     if [ "$OUTNUM" -ne 0 ];
     then
@@ -37,12 +39,22 @@ createPrefix () {
     fi
     ln -s $HOME "$PREFIX/dosdevices/h:"
     ln -s "/media/$USER" "$PREFIX/dosdevices/u:"
+
+    # set fontsmoothing
+    # https://wiki.archlinux.org/index.php/Wine#Enable_font_smoothing
+    WINEPREFIX=$PREFIX WINESERVER=$WINE_DIR/bin/wineserver \
+        WINE=$WINE_DIR/bin/wine $WINETRICKS_DIR/winetricks settings fontsmooth=rgb
+
+    #SetDirectDrawRender to GDI (solves graphical glitching of various menus,
+    #   etc disappearing / reappearing)
+    WINEPREFIX=$PREFIX WINESERVER=$WINE_DIR/bin/wineserver \
+        WINE=$WINE_DIR/bin/wine $WINETRICKS_DIR/winetricks ddr=gdi
 }
 
 errorExit () {
     zenity --error --no-wrap --height=200 \
         --title="wasta-msoffice-setup: Error" \
-        --window-icon=/usr/share/icons/hicolor/64x64/apps/wasta-offline.png \
+        --window-icon=$DIR/resources/wasta-linux.svg \
         --text="$1 \n
 <i>wasta-msoffice-setup will now exit.</i>" >/dev/null 2>&1
     exit 1
@@ -53,11 +65,13 @@ errorExit () {
 # ------------------------------------------------------------------------------
 # wasta-msoffice-setup directory (for resources)
 DIR=/usr/share/wasta-msoffice-setup
+WINE_DIR=/opt/wasta-wine
+WINETRICKS_DIR=/opt/wasta-winetricks
 PREFIX=/home/$USER/.wine-msoffice
 
 zenity --question --no-wrap --height=200 --width=500 \
     --title="wasta-msoffice-setup" \
-    --window-icon=wasta-linux \
+    --window-icon=$DIR/resources/wasta-linux.svg \
     --text="<b>Do you want to install MS Office using Wine?</b> 
 
 <b>Note:</b> <i><u>You will need valid MS Office installation media to continue!</u></i>
@@ -78,7 +92,7 @@ then
     # Wine PREFIX exists, ask user if they want to overwrite it or update it
     zenity --question --no-wrap --height=200 --width=500 \
         --title="wasta-msoffice-setup" \
-        --window-icon=wasta-linux \
+        --window-icon=$DIR/resources/wasta-linux.svg \
         --text="<b>Remove existing MS Office Wine Prefix?</b> 
 
 <i>The folder <u>'$PREFIX'</u> already exists.  Do you want to
@@ -92,7 +106,7 @@ else
     # No Wine PREFIX: prompt user
     zenity --question --no-wrap --height=200 --width=500 \
         --title="wasta-msoffice-setup" \
-        --window-icon=wasta-linux \
+        --window-icon=$DIR/resources/wasta-linux.svg \
         --text="<b>Setup MS Office Wine Prefix?</b>
 
 <i>Do you want to setup a MS Office Wine Prefix?</i>" >/dev/null 2>&1
@@ -110,13 +124,13 @@ if [ -d "$PREFIX" ];
 then
     zenity --info --no-wrap --height=200 --width=500 \
         --title="wasta-msoffice-setup" --ok-label="Continue" \
-        --window-icon=wasta-linux \
+        --window-icon=$DIR/resources/wasta-linux.svg \
         --text="<b>Ready to install MS Office</b>\n
 <i>You will need to to locate the <u>'setup.exe'</u> file from the
 main folder of your MS Office installation media</i>" >/dev/null 2>&1
 
     SETUP_FILE=$(zenity --file-selection \
-        --window-icon=wasta-linux \
+        --window-icon=$DIR/resources/wasta-linux.svg \
         --title="Select your MS Office 'setup.exe' File") >/dev/null 2>&1
     echo $SETUP_FILE
     if [[ "${SETUP_FILE,,}" == *"setup.exe" ]]
@@ -124,7 +138,7 @@ main folder of your MS Office installation media</i>" >/dev/null 2>&1
         # Run MS Office Setup
         zenity --info --height=200 --width=500 \
             --title="wasta-msoffice-setup" --ok-label="Continue" \
-            --window-icon=wasta-linux \
+            --window-icon=$DIR/resources/wasta-linux.svg \
             --text="<b>Ready for MS Office Installation</b>
 
 <b>******************************************************</b>
@@ -143,7 +157,8 @@ main folder of your MS Office installation media</i>" >/dev/null 2>&1
         grep -r -l --null "$PREFIX" "$HOME/.local/share/applications" \
             | xargs -0 rm >/dev/null 2>&1
 
-        WINEPREFIX=$PREFIX wine "$SETUP_FILE" >/dev/null 2>&1
+        WINEPREFIX=$PREFIX WINESERVER=$WINE_DIR/bin/wineserver \
+            $WINE_DIR/bin/wine "$SETUP_FILE" >/dev/null 2>&1
         OUTNUM=$?
         if [ "$OUTNUM" -ne 0 ];
         then
@@ -151,8 +166,20 @@ main folder of your MS Office installation media</i>" >/dev/null 2>&1
             errorExit "<b>MS Office setup failed!</b>"
         fi
 
+        # point to wasta-wine to run MS Office Programs
+
+# XG7KH-69X7Q-FWP4D-VRKMQ-CJ8BJ
+# grep -r -l --null "$PREFIX" "$HOME/.local/share/applications" | xargs -0
+
+        # Point to wasta-wine to run MS Office Programs
+        # note: grep --null returns null separated list to handle space in filenames
+        # note: xargs -0 to handle null separated items
+        grep -r -l --null "$PREFIX" "/home/$USER/.local/share/applications" \
+            | xargs -0 sed -i -e "s@ wine @ $WINE_DIR/bin/wine @"
+
         # Add "Saveas PDF" compatibility to MS Office
-        WINEPREFIX=$PREFIX wine $DIR/resources/SaveAsPDFandXPS.exe >/dev/null 2>&1
+        WINEPREFIX=$PREFIX WINESERVER=$WINE_DIR/bin/wineserver \
+            $WINE_DIR/bin/wine $DIR/resources/SaveAsPDFandXPS.exe
         OUTNUM=$?
         if [ "$OUTNUM" -ne 0 ];
         then
@@ -162,7 +189,7 @@ main folder of your MS Office installation media</i>" >/dev/null 2>&1
 
         zenity --info --no-wrap --height=200 \
             --title="wasta-msoffice-setup: Complete" \
-            --window-icon=wasta-linux \
+            --window-icon=$DIR/resources/wasta-linux.svg \
             --text="<b>MS Office setup complete!</b> \n
 <i>Find your MS Office applications in the <u>Main Menu</u>
 under the <u>'Wine'</u> category</i>" >/dev/null 2>&1
