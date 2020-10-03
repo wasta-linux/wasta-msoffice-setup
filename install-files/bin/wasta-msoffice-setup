@@ -7,6 +7,7 @@
 #   2018-10-16 rik: clean out old .desktop launchers and file associations
 #       before installing.
 #   2020-09-21 rik: updating to use wasta-wine and wasta-winetricks
+#   2020-10-03 rik: installing riched20 registry patch
 #
 # ==============================================================================
 
@@ -200,6 +201,13 @@ main folder of your MS Office installation media</i>" >/dev/null 2>&1
             # some failure: exit
             errorExit "<b>SaveAsPDF setup failed!</b>"
         fi
+
+        #riched20 native dll override needed by powerpoint
+        #
+        # Not sure why, but if run this before install dialog, can't click to enter
+        # license key??
+        WINEPREFIX=$PREFIX WINESERVER=$WINE_DIR/bin/wineserver \
+            $WINE_DIR/bin/regedit $DIR/resources/riched20.reg
 
         zenity --info --no-wrap --height=200 \
             --title="wasta-msoffice-setup: Complete" \

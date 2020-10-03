@@ -1,3 +1,9 @@
+wasta-msoffice-setup (1.1.2) focal; urgency=medium
+
+  * adding riched20.reg registry hack to use native dll
+
+ -- Rik Shaw <rikshaw76@gmail.com>  Sat, 03 Oct 2020 13:13:18 +0300
+
 wasta-msoffice-setup (1.1.1) focal; urgency=medium
 
   * debian/control: add wasta-winetricks-corefonts depends
