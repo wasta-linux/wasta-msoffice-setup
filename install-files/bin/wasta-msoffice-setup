@@ -44,7 +44,7 @@ createPrefix () {
         --title="Copying Winetricks Cache" \
         --text="Copying Winetricks Cache... \n\n")
 
-    WINEPREFIX=$PREFIX WINEARCH=win32 WINESERVER=$WINE_DIR/bin/wineserver \
+    WINEPREFIX=$PREFIX WINEARCH=win32 WINEDLLOVERRIDES="mscoree,mshtml=" WINESERVER=$WINE_DIR/bin/wineserver \
         WINE=$WINE_DIR/bin/wine $WINETRICKS_DIR/winetricks -q win7
     OUTNUM=$?
     if [ "$OUTNUM" -ne 0 ];
@@ -191,6 +191,11 @@ main folder of your MS Office installation media</i>" >/dev/null 2>&1
         # note: xargs -0 to handle null separated items
         grep -r -l --null "$PREFIX" "/home/$USER/.local/share/applications" \
             | xargs -0 sed -i -e "s@ wine @ $WINE_DIR/bin/wine @"
+
+        # 2020-10-25: not sure why, but launcher getting created with wrong wine
+        #   reference: fix it if found
+        grep -r -l --null "$PREFIX" "/home/$USER/.local/share/applications" \
+            | xargs -0 sed -i -e "s@ //bin/wine @ $WINE_DIR/bin/wine @"
 
         # Add "Saveas PDF" compatibility to MS Office
         WINEPREFIX=$PREFIX WINESERVER=$WINE_DIR/bin/wineserver \
